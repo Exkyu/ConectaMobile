@@ -36,6 +36,9 @@ public class ProfileActivity extends AppCompatActivity {
     private EditText nameEditText, emailEditText;
     private Button changePhotoButton, saveButton;
 
+    private EditText passwordEditText;
+    private Button backButton;
+
     private Uri imageUri;
 
     @Override
@@ -53,12 +56,16 @@ public class ProfileActivity extends AppCompatActivity {
         emailEditText = findViewById(R.id.emailEditText);
         changePhotoButton = findViewById(R.id.changePhotoButton);
         saveButton = findViewById(R.id.saveButton);
+        passwordEditText = findViewById(R.id.passwordEditText);
+        backButton = findViewById(R.id.backButton);
 
         emailEditText.setText(currentUser.getEmail());
         loadUserProfile();
 
         changePhotoButton.setOnClickListener(v -> openImagePicker());
         saveButton.setOnClickListener(v -> saveUserProfile());
+        backButton.setOnClickListener(v -> finish());
+        saveButton.setOnClickListener(v -> saveUserData());
     }
 
     private void loadUserProfile() {
@@ -81,6 +88,22 @@ public class ProfileActivity extends AppCompatActivity {
                 Log.e(TAG, "Error loading profile", error.toException());
             }
         });
+    }
+    private void saveUserData() {
+        String name = nameEditText.getText().toString().trim();
+        String password = passwordEditText.getText().toString().trim();
+
+        if (name.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseUser user = auth.getCurrentUser();
+        if (user != null) {
+            database.child(user.getUid()).child("name").setValue(name);
+            database.child(user.getUid()).child("password").setValue(password);
+            Toast.makeText(this, "Datos actualizados", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void openImagePicker() {

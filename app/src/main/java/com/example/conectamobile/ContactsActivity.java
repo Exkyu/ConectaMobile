@@ -3,6 +3,7 @@ package com.example.conectamobile;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 
 import androidx.annotation.NonNull;
@@ -28,12 +29,14 @@ public class ContactsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_contacts);
 
         contactsListView = findViewById(R.id.contactsListView);
+        Button backButton = findViewById(R.id.backButton);
         contactsList = new ArrayList<>();
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, contactsList);
         contactsListView.setAdapter(adapter);
 
         database = FirebaseDatabase.getInstance().getReference("contacts");
         loadContacts();
+        backButton.setOnClickListener(v -> finish());
     }
 
     private void loadContacts() {

@@ -24,11 +24,11 @@
             android:name=".ContactsActivity"
             android:exported="false" />
         <activity
-            android:name=".act_login"
-            android:exported="false" />
+            android:name=".LoginActivity"
+            android:exported="true" />
         <activity
             android:name=".MainActivity"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

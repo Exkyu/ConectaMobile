@@ -32,14 +32,25 @@ public class LoginActivity extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordEditText);
         Button loginButton = findViewById(R.id.loginButton);
         Button registerButton = findViewById(R.id.registerButton);
+        Button editUserButton = findViewById(R.id.editUserButton);
+
 
         auth = FirebaseAuth.getInstance();
         database = FirebaseDatabase.getInstance().getReference("users");
 
         loginButton.setOnClickListener(v -> loginUser());
         registerButton.setOnClickListener(v -> registerUser());
+        editUserButton.setOnClickListener(v -> {
+            FirebaseUser user = auth.getCurrentUser();
+            if (user != null) {
+                Intent intent = new Intent(LoginActivity.this, ProfileActivity.class);
+                intent.putExtra("userId", user.getUid());
+                startActivity(intent);
+            } else {
+                Toast.makeText(LoginActivity.this, "Inicia sesión primero", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
-
     private void loginUser() {
         String email = emailEditText.getText().toString().trim();
         String password = passwordEditText.getText().toString().trim();

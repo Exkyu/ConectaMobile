@@ -48,7 +48,7 @@ public class ChatActivity extends AppCompatActivity {
         chatListView = findViewById(R.id.chatListView);
         messageEditText = findViewById(R.id.messageEditText);
         sendButton = findViewById(R.id.sendButton);
-
+        Button backButton = findViewById(R.id.backButton);
         messagesList = new ArrayList<>();
         chatAdapter = new ChatAdapter(this, messagesList);
         chatListView.setAdapter(chatAdapter);
@@ -59,6 +59,7 @@ public class ChatActivity extends AppCompatActivity {
         loadMessages();
 
         sendButton.setOnClickListener(view -> sendMessage());
+        backButton.setOnClickListener(v -> finish());
     }
 
     private void setupMQTT() {
