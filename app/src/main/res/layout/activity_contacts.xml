@@ -8,10 +8,11 @@
         android:id="@+id/contactsListView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+
     <Button
-    android:id="@+id/backButton"
-    android:layout_width="match_parent"
-    android:layout_height="187dp"
-    android:text="Volver Atrás" />
+        android:id="@+id/backButton"
+        android:layout_width="match_parent"
+        android:layout_height="187dp"
+        android:text="Volver Atrás" />
 
 </LinearLayout>

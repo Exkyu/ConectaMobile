@@ -20,7 +20,6 @@ import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
-import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
@@ -28,8 +27,9 @@ import java.util.ArrayList;
 
 public class ChatActivity extends AppCompatActivity {
     private static final String TAG = "ChatActivity";
-    private static final String MQTT_SERVER_URI = "tcp://broker.hivemq.com:1883"; // Servidor público MQTT
-    private static final String TOPIC = "chat/messages";
+    private static final String MQTT_SERVER_URI = "tcp://broker.hivemq.com:1883";
+    private static final String CLIENT_ID = "dbf40fc4b0a3413c86160847055a20c7";
+    private static final String TOPIC = "chat/msg";
 
     private ListView chatListView;
     private EditText messageEditText;
@@ -39,6 +39,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private DatabaseReference database;
     private MqttAndroidClient mqttClient;
+    private boolean isMqttConnected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,12 +64,13 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void setupMQTT() {
-        mqttClient = new MqttAndroidClient(getApplicationContext(), MQTT_SERVER_URI, MqttClient.generateClientId());
+        mqttClient = new MqttAndroidClient(getApplicationContext(), MQTT_SERVER_URI, CLIENT_ID);
 
         try {
             mqttClient.connect().setActionCallback(new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
+                    isMqttConnected = true; // La conexión se estableció correctamente
                     Log.d(TAG, "Conexión exitosa a MQTT");
                     try {
                         mqttClient.subscribe(TOPIC, 1); // Suscribirse al tópico
@@ -79,6 +81,7 @@ public class ChatActivity extends AppCompatActivity {
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    isMqttConnected = false; // La conexión falló
                     Log.e(TAG, "Error al conectar con MQTT", exception);
                 }
             });
@@ -86,6 +89,7 @@ public class ChatActivity extends AppCompatActivity {
             mqttClient.setCallback(new MqttCallback() {
                 @Override
                 public void connectionLost(Throwable cause) {
+                    isMqttConnected = false; // La conexión se perdió
                     Log.e(TAG, "MQTT connection lost", cause);
                 }
 
@@ -131,11 +135,17 @@ public class ChatActivity extends AppCompatActivity {
             // Guardar mensaje en Firebase
             database.push().setValue(message);
 
-            // Publicar mensaje en MQTT
-            try {
-                mqttClient.publish(TOPIC, new MqttMessage(message.getBytes()));
-            } catch (MqttException e) {
-                Log.e(TAG, "Error publishing message", e);
+            // Verificar conexión MQTT antes de publicar
+            if (isMqttConnected) {
+                try {
+                    mqttClient.publish(TOPIC, new MqttMessage(message.getBytes()));
+                    Log.d(TAG, "Mensaje publicado en MQTT" + message);
+                } catch (MqttException e) {
+                    Log.e(TAG, "Error publicando mensaje en MQTT", e);
+                }
+            } else {
+                Log.e(TAG, "MQTT no está conectado. Mensaje no enviado a MQTT.");
+                Toast.makeText(this, "Error: No hay conexión a MQTT", Toast.LENGTH_SHORT).show();
             }
 
             messageEditText.setText("");

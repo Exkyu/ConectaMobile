@@ -59,7 +59,6 @@ public class LoginActivity extends AppCompatActivity {
             Toast.makeText(this, "Por favor ingresa correo y contraseña", Toast.LENGTH_SHORT).show();
             return;
         }
-
         database.orderByChild("email").equalTo(email).addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -68,9 +67,9 @@ public class LoginActivity extends AppCompatActivity {
                         String dbPassword = userSnapshot.child("password").getValue(String.class);
                         if (dbPassword != null && dbPassword.equals(password)) {
                             Toast.makeText(LoginActivity.this, "Inicio de sesión exitoso", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+                            Intent intent = new Intent(LoginActivity.this, ChatActivity.class);
+                            startActivity(intent);
                             finish();
-                            return;
                         }
                     }
                     Toast.makeText(LoginActivity.this, "Contraseña incorrecta", Toast.LENGTH_SHORT).show();
@@ -115,7 +114,7 @@ public class LoginActivity extends AppCompatActivity {
                             });
                 }
             } else {
-                Toast.makeText(LoginActivity.this, "Error: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginActivity.this, "Error" + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
