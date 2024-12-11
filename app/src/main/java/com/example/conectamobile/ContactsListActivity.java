@@ -33,7 +33,13 @@ public class ContactsListActivity extends AppCompatActivity {
         setContentView(R.layout.activity_contacts_list);
 
         contactsListView = findViewById(R.id.contactsListView);
+
         Button deleteContactButton = findViewById(R.id.deleteContactButton);
+        Button backButton = findViewById(R.id.backButtonList);
+        backButton.setOnClickListener(v ->{
+            Intent intent = new Intent(ContactsListActivity.this, MainMenuActivity.class);
+            startActivity(intent);
+        });
 
         contactNames = new ArrayList<>();
         contactIds = new ArrayList<>();

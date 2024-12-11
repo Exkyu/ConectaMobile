@@ -1,5 +1,6 @@
 package com.example.conectamobile;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
@@ -24,6 +25,12 @@ public class ContactsActivity extends AppCompatActivity {
         emailEditText = findViewById(R.id.emailEditText);
         phoneEditText = findViewById(R.id.phoneEditText);
         Button saveButton = findViewById(R.id.saveButton);
+        Button backButton = findViewById(R.id.backButtonCon);
+        backButton.setOnClickListener(v ->{
+            Intent intent = new Intent(ContactsActivity.this, MainMenuActivity.class);
+            startActivity(intent);
+        });
+
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null) {
