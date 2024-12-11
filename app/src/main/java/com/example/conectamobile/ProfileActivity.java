@@ -24,6 +24,7 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 public class ProfileActivity extends AppCompatActivity {
+
     private static final int PICK_IMAGE_REQUEST = 1;
     private static final String TAG = "ProfileActivity";
 
@@ -37,7 +38,7 @@ public class ProfileActivity extends AppCompatActivity {
     private Button changePhotoButton, saveButton;
 
     private EditText passwordEditText;
-    private Button backButton;
+    // private Button backButton;
 
     private Uri imageUri;
 
@@ -57,14 +58,17 @@ public class ProfileActivity extends AppCompatActivity {
         changePhotoButton = findViewById(R.id.changePhotoButton);
         saveButton = findViewById(R.id.saveButton);
         passwordEditText = findViewById(R.id.passwordEditText);
-        backButton = findViewById(R.id.backButton);
+        Button backButton = findViewById(R.id.backButtonP);
 
         emailEditText.setText(currentUser.getEmail());
         loadUserProfile();
 
         changePhotoButton.setOnClickListener(v -> openImagePicker());
         saveButton.setOnClickListener(v -> saveUserProfile());
-        backButton.setOnClickListener(v -> finish());
+        backButton.setOnClickListener(v ->
+            /*Intent intent = new Intent(ProfileActivity.this, LoginActivity.class);
+            startActivity(intent);*/
+            finish());
         saveButton.setOnClickListener(v -> saveUserData());
     }
 
@@ -85,7 +89,7 @@ public class ProfileActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Log.e(TAG, "Error loading profile", error.toException());
+                Log.e(TAG, "Error al cargar perfil", error.toException());
             }
         });
     }

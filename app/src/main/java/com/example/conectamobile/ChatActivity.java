@@ -5,11 +5,13 @@ import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -22,10 +24,10 @@ import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-
 import java.util.ArrayList;
 
 public class ChatActivity extends AppCompatActivity {
+
     private static final String TAG = "ChatActivity";
     private static final String MQTT_SERVER_URI = "tcp://broker.hivemq.com:1883";
     private static final String CLIENT_ID = "dbf40fc4b0a3413c86160847055a20c7";
@@ -49,21 +51,49 @@ public class ChatActivity extends AppCompatActivity {
         chatListView = findViewById(R.id.chatListView);
         messageEditText = findViewById(R.id.messageEditText);
         sendButton = findViewById(R.id.sendButton);
-        Button backButton = findViewById(R.id.backButton);
+        Button backButton = findViewById(R.id.backButtonC);
+        TextView chatTextView = findViewById(R.id.chatTextView);
+
         messagesList = new ArrayList<>();
         chatAdapter = new ChatAdapter(this, messagesList);
         chatListView.setAdapter(chatAdapter);
 
         database = FirebaseDatabase.getInstance().getReference("messages");
 
-        setupMQTT();
+        // Obtener datos del contacto seleccionado
+        String contactId = getIntent().getStringExtra("contactId");
+        String contactName = getIntent().getStringExtra("contactName");
+
+        setupMQTT(contactId);
         loadMessages();
 
-        sendButton.setOnClickListener(view -> sendMessage());
+        sendButton.setOnClickListener(view -> sendMessage(contactId));
+        backButton.setOnClickListener(v -> finish());
+        if (contactId == null || contactName == null) {
+            Toast.makeText(this, "No se seleccionó un contacto válido", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        // Título del chat con el nombre del contacto
+        if (contactName != null) {
+            setTitle("Chat con " + contactName);
+        } else {
+            chatTextView.setText("Chat");
+        }
+
+        // Nodo de la base de datos para el chat entre el usuario y el contacto
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        database = FirebaseDatabase.getInstance().getReference("chats").child(userId).child(contactId);
+
+        setupMQTT(contactId); // Configurar MQTT para este contacto
+        loadMessages();
+
+        sendButton.setOnClickListener(view -> sendMessage(contactId));
         backButton.setOnClickListener(v -> finish());
     }
 
-    private void setupMQTT() {
+    private void setupMQTT(String contactId) {
         mqttClient = new MqttAndroidClient(getApplicationContext(), MQTT_SERVER_URI, CLIENT_ID);
 
         try {
@@ -129,17 +159,17 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
-    private void sendMessage() {
+    private void sendMessage(String contactId) {
         String message = messageEditText.getText().toString().trim();
         if (!message.isEmpty()) {
             // Guardar mensaje en Firebase
             database.push().setValue(message);
 
-            // Verificar conexión MQTT antes de publicar
+            // Publicar mensaje en MQTT
             if (isMqttConnected) {
                 try {
-                    mqttClient.publish(TOPIC, new MqttMessage(message.getBytes()));
-                    Log.d(TAG, "Mensaje publicado en MQTT" + message);
+                    mqttClient.publish("chat/msg" + contactId, new MqttMessage(message.getBytes()));
+                    Log.d(TAG, "Mensaje publicado en MQTT: " + message);
                 } catch (MqttException e) {
                     Log.e(TAG, "Error publicando mensaje en MQTT", e);
                 }

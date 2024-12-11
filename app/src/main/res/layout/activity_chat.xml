@@ -36,7 +36,7 @@
             android:text="Enviar" />
     </LinearLayout>
     <Button
-        android:id="@+id/backButton"
+        android:id="@+id/backButtonC"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Volver Atrás" />
