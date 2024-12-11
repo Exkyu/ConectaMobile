@@ -28,65 +28,83 @@ import java.util.Map;
 
 public class ChatActivity extends AppCompatActivity {
 
-    private static final String TAG = "ChatActivity";
-    private static final String MQTT_BROKER_URL = "tcp://broker.hivemq.com:1883";
-    private static final String TOPIC_BASE = "chat/";
+    private static final String TAG = "ChatActivity"; // Tag para depuración
+    private static final String MQTT_BROKER_URL = "tcp://broker.hivemq.com:1883"; // URL del broker MQTT
+    private static final String TOPIC_BASE = "chat/"; // Base del tópico MQTT
 
+    // Elementos de UI
     private ListView chatListView;
     private EditText messageEditText;
     private TextView chatTextView;
     private Button sendButton;
+
+    // Datos y adaptadores
     private ArrayList<Message> messagesList;
     private MessageAdapter messageAdapter;
 
-    private DatabaseReference database;
-    private DatabaseReference messagesDatabase;
-    private MqttServicio mqttServicio;
-    private String topic;
+    // Firebase
+    private DatabaseReference database; // Referencia al nodo de contactos en Firebase
+    private DatabaseReference messagesDatabase; // Referencia al nodo de mensajes en Firebase
+
+    // MQTT
+    private MqttServicio mqttServicio; // Servicio personalizado para manejar MQTT
+    private String topic; // Tópico específico del chat
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
+        // Inicialización de los elementos de UI
         chatListView = findViewById(R.id.chatListView);
         messageEditText = findViewById(R.id.messageEditText);
         chatTextView = findViewById(R.id.chatTextView);
         sendButton = findViewById(R.id.sendButton);
         Button backButton = findViewById(R.id.backButtonC);
 
+        // Inicialización de lista y adaptador para los mensajes
         messagesList = new ArrayList<>();
         messageAdapter = new MessageAdapter(this, messagesList);
         chatListView.setAdapter(messageAdapter);
 
+        // Obtener el ID del contacto del intent
         String contactId = getIntent().getStringExtra("contactId");
 
         if (contactId == null) {
+            // Si no se seleccionó un contacto válido, muestra un mensaje y cierra la actividad
             Toast.makeText(this, "No se seleccionó un contacto válido", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
+        // Texto inicial mientras se cargan los datos del contacto
         chatTextView.setText("Cargando...");
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             String userId = user.getUid();
+
+            // Referencias a los nodos en Firebase
             database = FirebaseDatabase.getInstance().getReference("contacts").child(userId).child(contactId);
             messagesDatabase = FirebaseDatabase.getInstance().getReference("messages").child(userId).child(contactId);
 
+            // Recuperar datos del contacto
             database.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
                     if (snapshot.exists()) {
+                        // Obtener correo y nombre del contacto
                         String contactEmail = snapshot.child("email").getValue(String.class);
                         String contactName = snapshot.child("name").getValue(String.class);
 
                         if (contactEmail != null && contactName != null) {
+                            // Generar el tópico único para este chat
                             topic = generateTopic(user.getEmail(), contactEmail);
 
+                            // Actualizar la cabecera del chat
                             chatTextView.setText("Chat con " + contactName + " (" + topic + ")");
 
+                            // Configurar MQTT y cargar mensajes
                             try {
                                 mqttServicio = new MqttServicio(MQTT_BROKER_URL);
                                 setupMQTT();
@@ -97,6 +115,7 @@ public class ChatActivity extends AppCompatActivity {
                                 finish();
                             }
 
+                            // Configurar listeners para botones
                             sendButton.setOnClickListener(view -> sendMessage());
                             backButton.setOnClickListener(v -> finish());
                         } else {
@@ -120,18 +139,21 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
+    // Genera un tópico único basado en los correos de los usuarios
     private String generateTopic(String email1, String email2) {
         ArrayList<String> emails = new ArrayList<>();
         emails.add(normalizeEmail(email1));
         emails.add(normalizeEmail(email2));
-        Collections.sort(emails); // Ordenar alfabéticamente
+        Collections.sort(emails); // Ordenar alfabéticamente para consistencia
         return TOPIC_BASE + emails.get(0) + "_" + emails.get(1);
     }
 
+    // Normaliza correos electrónicos reemplazando caracteres no válidos
     private String normalizeEmail(String email) {
         return email.replace("@", "_").replace(".", "_");
     }
 
+    // Configura la conexión MQTT
     private void setupMQTT() {
         mqttServicio.setCallback(new MqttCallback() {
             @Override
@@ -145,8 +167,8 @@ public class ChatActivity extends AppCompatActivity {
                 String newMessage = new String(message.getPayload());
                 Log.d(TAG, "Mensaje recibido en tópico: " + topic + ", mensaje: " + newMessage);
 
+                // Guardar mensaje en Firebase y actualizar la UI
                 saveMessageToFirebase(newMessage, "received");
-
                 runOnUiThread(() -> {
                     messagesList.add(new Message(newMessage, "received"));
                     messageAdapter.notifyDataSetChanged();
@@ -159,11 +181,13 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
+        // Conectar y suscribir al tópico
         mqttServicio.connect();
         Log.d(TAG, "Suscribiéndose al tópico: " + topic);
         mqttServicio.subscribe(topic);
     }
 
+    // Carga los mensajes desde Firebase
     private void loadMessages() {
         messagesDatabase.addValueEventListener(new com.google.firebase.database.ValueEventListener() {
             @Override
@@ -184,6 +208,7 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
+    // Envía un mensaje al tópico MQTT y lo guarda en Firebase
     private void sendMessage() {
         String message = messageEditText.getText().toString().trim();
         if (!message.isEmpty()) {
@@ -202,6 +227,7 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
+    // Guarda un mensaje en Firebase
     private void saveMessageToFirebase(String message, String type) {
         String messageId = messagesDatabase.push().getKey();
         if (messageId != null) {
@@ -222,6 +248,7 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        // Desconectar MQTT al destruir la actividad
         if (mqttServicio != null) {
             mqttServicio.disconnect();
             Log.d(TAG, "Desconexión de MQTT exitosa");
