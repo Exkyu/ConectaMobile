@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -32,6 +33,8 @@ public class ContactsListActivity extends AppCompatActivity {
         setContentView(R.layout.activity_contacts_list);
 
         contactsListView = findViewById(R.id.contactsListView);
+        Button deleteContactButton = findViewById(R.id.deleteContactButton);
+
         contactNames = new ArrayList<>();
         contactIds = new ArrayList<>();
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, contactNames);
@@ -51,6 +54,16 @@ public class ContactsListActivity extends AppCompatActivity {
             intent.putExtra("contactId", contactId); // Enviar ID del contacto
             intent.putExtra("contactName", contactName); // Enviar nombre del contacto
             startActivity(intent);
+        });
+
+        deleteContactButton.setOnClickListener(v -> {
+            int position = contactsListView.getCheckedItemPosition();
+            if (position != -1) {
+                String contactIdToDelete = contactIds.get(position);
+                deleteContact(contactIdToDelete);
+            } else {
+                Toast.makeText(this, "Selecciona un contacto para eliminar", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -78,5 +91,18 @@ public class ContactsListActivity extends AppCompatActivity {
                 Toast.makeText(ContactsListActivity.this, "Error al cargar los contactos", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void deleteContact(String contactId) {
+        database.child(contactId).removeValue()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Toast.makeText(this, "Contacto eliminado correctamente", Toast.LENGTH_SHORT).show();
+                        loadContacts();
+                    } else {
+                        Toast.makeText(this, "Error al eliminar el contacto", Toast.LENGTH_SHORT).show();
+                        Log.e("ContactsListActivity", "Error deleting contact");
+                    }
+                });
     }
 }
