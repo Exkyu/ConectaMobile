@@ -22,6 +22,7 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,8 +36,8 @@ public class ChatActivity extends AppCompatActivity {
     private EditText messageEditText;
     private TextView chatTextView;
     private Button sendButton;
-    private ArrayList<String> messagesList;
-    private ChatAdapter chatAdapter;
+    private ArrayList<Message> messagesList;
+    private MessageAdapter messageAdapter;
 
     private DatabaseReference database;
     private DatabaseReference messagesDatabase;
@@ -55,8 +56,8 @@ public class ChatActivity extends AppCompatActivity {
         Button backButton = findViewById(R.id.backButtonC);
 
         messagesList = new ArrayList<>();
-        chatAdapter = new ChatAdapter(this, messagesList);
-        chatListView.setAdapter(chatAdapter);
+        messageAdapter = new MessageAdapter(this, messagesList);
+        chatListView.setAdapter(messageAdapter);
 
         String contactId = getIntent().getStringExtra("contactId");
 
@@ -82,9 +83,7 @@ public class ChatActivity extends AppCompatActivity {
                         String contactName = snapshot.child("name").getValue(String.class);
 
                         if (contactEmail != null && contactName != null) {
-                            String normalizedUserEmail = normalizeEmail(user.getEmail());
-                            String normalizedContactEmail = normalizeEmail(contactEmail);
-                            topic = TOPIC_BASE + normalizedUserEmail + "_" + normalizedContactEmail;
+                            topic = generateTopic(user.getEmail(), contactEmail);
 
                             chatTextView.setText("Chat con " + contactName + " (" + topic + ")");
 
@@ -121,6 +120,14 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
+    private String generateTopic(String email1, String email2) {
+        ArrayList<String> emails = new ArrayList<>();
+        emails.add(normalizeEmail(email1));
+        emails.add(normalizeEmail(email2));
+        Collections.sort(emails); // Ordenar alfabéticamente
+        return TOPIC_BASE + emails.get(0) + "_" + emails.get(1);
+    }
+
     private String normalizeEmail(String email) {
         return email.replace("@", "_").replace(".", "_");
     }
@@ -138,12 +145,11 @@ public class ChatActivity extends AppCompatActivity {
                 String newMessage = new String(message.getPayload());
                 Log.d(TAG, "Mensaje recibido en tópico: " + topic + ", mensaje: " + newMessage);
 
-                // Guardar el mensaje recibido en Firebase
                 saveMessageToFirebase(newMessage, "received");
 
                 runOnUiThread(() -> {
-                    messagesList.add(newMessage);
-                    chatAdapter.notifyDataSetChanged();
+                    messagesList.add(new Message(newMessage, "received"));
+                    messageAdapter.notifyDataSetChanged();
                 });
             }
 
@@ -165,9 +171,10 @@ public class ChatActivity extends AppCompatActivity {
                 messagesList.clear();
                 for (DataSnapshot messageSnapshot : snapshot.getChildren()) {
                     String message = messageSnapshot.child("text").getValue(String.class);
-                    messagesList.add(message);
+                    String type = messageSnapshot.child("type").getValue(String.class);
+                    messagesList.add(new Message(message, type));
                 }
-                runOnUiThread(() -> chatAdapter.notifyDataSetChanged());
+                runOnUiThread(() -> messageAdapter.notifyDataSetChanged());
             }
 
             @Override
@@ -180,7 +187,6 @@ public class ChatActivity extends AppCompatActivity {
     private void sendMessage() {
         String message = messageEditText.getText().toString().trim();
         if (!message.isEmpty()) {
-            // Guardar el mensaje en Firebase
             saveMessageToFirebase(message, "sent");
 
             if (mqttServicio.isConnected()) {
@@ -201,7 +207,7 @@ public class ChatActivity extends AppCompatActivity {
         if (messageId != null) {
             Map<String, String> messageData = new HashMap<>();
             messageData.put("text", message);
-            messageData.put("type", type); // "sent" o "received"
+            messageData.put("type", type);
             messagesDatabase.child(messageId).setValue(messageData)
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
